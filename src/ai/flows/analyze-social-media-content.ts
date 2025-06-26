@@ -32,7 +32,7 @@ const AnalyzeSocialMediaContentOutputSchema = z.object({
     .array(z.string())
     .describe('A list of potential drug trafficking indicators found in the content.'),
   riskLevel: z
-    .enum(['low', 'medium', 'high'])
+    .enum(['Low', 'Medium', 'High'])
     .describe('The overall risk level associated with the content.'),
   reasoning: z.string().describe('The reasoning behind the identified indicators and risk level.'),
 });
@@ -51,7 +51,7 @@ const analyzeSocialMediaContentPrompt = ai.definePrompt({
   prompt: `You are an AI assistant specializing in identifying drug trafficking activities on social media platforms.
 
   Analyze the content from {{platform}} provided below and identify any potential indicators of drug trafficking.
-  Assess the overall risk level (low, medium, or high) based on the identified indicators.
+  Assess the overall risk level (Low, Medium, or High) based on the identified indicators.
   Provide a clear explanation of your reasoning for the identified indicators and the assigned risk level.
 
   Content: {{{content}}}

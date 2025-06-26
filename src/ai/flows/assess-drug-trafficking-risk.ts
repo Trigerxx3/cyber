@@ -22,7 +22,7 @@ const AssessDrugTraffickingRiskOutputSchema = z.object({
     .number()
     .describe('A score from 0 to 100 representing the likelihood of drug trafficking involvement.'),
   riskLevel: z
-    .string()
+    .enum(['Low', 'Medium', 'High'])
     .describe(
       'A qualitative assessment of the risk level (e.g., Low, Medium, High) based on the risk score.'
     ),

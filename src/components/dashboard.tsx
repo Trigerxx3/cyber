@@ -9,10 +9,12 @@ import { Bot, FileText, Loader2, Send, ShieldAlert, User, MessageSquare, Instagr
 import { analyzeSocialMediaContent, AnalyzeSocialMediaContentOutput } from "@/ai/flows/analyze-social-media-content";
 import { assessDrugTraffickingRisk, AssessDrugTraffickingRiskOutput } from "@/ai/flows/assess-drug-trafficking-risk";
 import { generateReportFromAnalysis, GenerateReportFromAnalysisOutput } from "@/ai/flows/generate-report-from-analysis";
+import { saveAnalysisToFirestore } from "@/app/actions";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -25,6 +27,7 @@ const formSchema = z.object({
   platform: z.enum(["Telegram", "WhatsApp", "Instagram"], {
     required_error: "Please select a platform.",
   }),
+  channel: z.string().min(3, { message: "Channel must be at least 3 characters." }),
   content: z.string().min(20, { message: "Content must be at least 20 characters." }),
 });
 
@@ -45,6 +48,7 @@ export function Dashboard() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       content: "",
+      channel: "",
     },
   });
 
@@ -71,6 +75,30 @@ export function Dashboard() {
         riskAssessment: JSON.stringify(risk, null, 2),
       });
       setReportResult(report);
+
+      if (risk.riskLevel !== 'Low') {
+        const saveResult = await saveAnalysisToFirestore({
+          platform: values.platform,
+          channel: values.channel,
+          content: values.content,
+          analysisResult: analysis,
+          riskResult: risk,
+        });
+
+        if (saveResult.success && saveResult.message !== 'Low risk, not saving.') {
+          toast({
+            title: "Analysis Saved",
+            description: `Flagged content has been saved to the database.`,
+          });
+        } else if (!saveResult.success) {
+          toast({
+            variant: "destructive",
+            title: "Save Failed",
+            description: saveResult.message,
+          });
+        }
+      }
+
     } catch (error) {
       console.error("Analysis pipeline failed:", error);
       toast({
@@ -235,6 +263,19 @@ export function Dashboard() {
                             </SelectItem>
                           </SelectContent>
                         </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="channel"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Channel / Group / Username</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g. @example_channel" {...field} />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
