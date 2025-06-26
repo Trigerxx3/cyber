@@ -1,11 +1,8 @@
 'use server';
 
-import { firebaseAdmin } from '@/lib/firebase-admin';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import type { AnalyzeSocialMediaContentOutput } from '@/ai/flows/analyze-social-media-content';
 import type { AssessDrugTraffickingRiskOutput } from '@/ai/flows/assess-drug-trafficking-risk';
-
-const db = firebaseAdmin.firestore();
-const FieldValue = firebaseAdmin.firestore.FieldValue;
 
 export type FirestoreAnalysisData = {
     platform: string;
@@ -16,10 +13,21 @@ export type FirestoreAnalysisData = {
 };
 
 export async function saveAnalysisToFirestore(data: FirestoreAnalysisData) {
+    const firebaseAdmin = getFirebaseAdmin();
+
+    if (!firebaseAdmin) {
+        const message = 'Firebase is not configured, skipping save to Firestore. Please set Firebase environment variables.';
+        console.warn(message);
+        return { success: true, message };
+    }
+
     if (data.riskResult.riskLevel === 'Low') {
         console.log('Low risk, not saving to Firestore.');
         return { success: true, message: 'Low risk, not saving.' };
     }
+
+    const db = firebaseAdmin.firestore();
+    const FieldValue = firebaseAdmin.firestore.FieldValue;
 
     try {
         const docRef = db.collection('flagged_posts').doc();

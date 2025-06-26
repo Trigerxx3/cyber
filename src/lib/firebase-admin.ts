@@ -1,18 +1,41 @@
 import admin from 'firebase-admin';
 
-if (!admin.apps.length) {
-    const privateKey = process.env.FIREBASE_PRIVATE_KEY;
-    if (!privateKey) {
-        throw new Error('The FIREBASE_PRIVATE_KEY environment variable is not set.');
+// Cache the admin instance.
+let adminInstance: typeof admin | null = null;
+
+export function getFirebaseAdmin() {
+    if (adminInstance) {
+        return adminInstance;
     }
 
-    admin.initializeApp({
-        credential: admin.credential.cert({
-            projectId: process.env.FIREBASE_PROJECT_ID,
-            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-            privateKey: privateKey.replace(/\\n/g, '\n'),
-        })
-    });
-}
+    // If there's an existing app, use it.
+    if (admin.apps.length > 0) {
+        adminInstance = admin;
+        return adminInstance;
+    }
+    
+    const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+    const projectId = process.env.FIREBASE_PROJECT_ID;
+    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
 
-export const firebaseAdmin = admin;
+    if (!privateKey || !projectId || !clientEmail) {
+        console.warn('Firebase Admin environment variables not set. Firestore features will be disabled.');
+        return null;
+    }
+  
+    try {
+        admin.initializeApp({
+            credential: admin.credential.cert({
+                projectId: projectId,
+                clientEmail: clientEmail,
+                privateKey: privateKey.replace(/\\n/g, '\n'),
+            })
+        });
+        adminInstance = admin;
+    } catch (error) {
+        console.error('Failed to initialize Firebase Admin SDK:', error);
+        adminInstance = null;
+    }
+  
+    return adminInstance;
+}
