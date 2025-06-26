@@ -1,13 +1,13 @@
 'use client';
 
 import * as React from 'react';
-import { getDashboardData } from '@/app/actions';
+import { getDashboardData, seedDatabase } from '@/app/actions';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { BarChart, Download, FileWarning, KeyRound, PieChartIcon, Users } from 'lucide-react';
+import { BarChart, Download, FileWarning, KeyRound, Loader2, PieChartIcon, Sparkles, Users } from 'lucide-react';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from '@/components/ui/chart';
 import { Bar, Pie, PieChart, ResponsiveContainer, Cell, XAxis, YAxis, Tooltip as RechartsTooltip, CartesianGrid } from 'recharts';
 import { format, parseISO } from 'date-fns';
@@ -46,6 +46,7 @@ const riskLevelChartConfig = {
   Low: { label: 'Low', color: 'hsl(var(--chart-2))' },
   Medium: { label: 'Medium', color: 'hsl(var(--chart-4))' },
   High: { label: 'High', color: 'hsl(var(--chart-1))' },
+  Critical: { label: 'Critical', color: 'hsl(var(--destructive))' },
 } satisfies ChartConfig;
 
 const platformChartConfig = {
@@ -62,33 +63,63 @@ const keywordChartConfig = {
 export function LiveDashboard() {
   const { toast } = useToast();
   const [loading, setLoading] = React.useState(true);
+  const [isSeeding, setIsSeeding] = React.useState(false);
   const [data, setData] = React.useState<{
     flaggedPosts: FlaggedPost[];
     suspectedUsers: SuspectedUser[];
     stats: Stats;
   } | null>(null);
 
-  React.useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true);
-        const result = await getDashboardData();
-        if (result) {
-            setData(result as any);
-        }
-      } catch (error) {
-        console.error("Failed to fetch dashboard data:", error);
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Could not fetch dashboard data.",
-        })
-      } finally {
-        setLoading(false);
+  const fetchData = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      const result = await getDashboardData();
+      if (result) {
+          setData(result as any);
       }
+    } catch (error) {
+      console.error("Failed to fetch dashboard data:", error);
+      toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Could not fetch dashboard data.",
+      })
+    } finally {
+      setLoading(false);
     }
-    fetchData();
   }, [toast]);
+
+  React.useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleSeedDatabase = async () => {
+    setIsSeeding(true);
+    try {
+        const result = await seedDatabase();
+        if (result.success) {
+            toast({
+                title: 'Success',
+                description: result.message,
+            });
+            await fetchData();
+        } else {
+            toast({
+                variant: 'destructive',
+                title: 'Seeding Failed',
+                description: result.message,
+            });
+        }
+    } catch (error) {
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'An unexpected error occurred while seeding the database.',
+        });
+    } finally {
+        setIsSeeding(false);
+    }
+  };
 
   const handleExport = () => {
     toast({
@@ -128,8 +159,21 @@ export function LiveDashboard() {
     return (
         <div className="flex flex-col items-center justify-center text-center p-12 border-2 border-dashed rounded-lg h-full min-h-[60vh]">
             <PieChartIcon className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-xl font-semibold">No Data Yet</h3>
-            <p className="text-muted-foreground mt-1">Submit some analyses to populate the dashboard.</p>
+            <h3 className="text-xl font-semibold">Dashboard is Empty</h3>
+            <p className="text-muted-foreground mt-2 max-w-md">Submit some analyses to see data, or populate the dashboard with sample data to get started.</p>
+            <Button className="mt-6" onClick={handleSeedDatabase} disabled={isSeeding}>
+                {isSeeding ? (
+                    <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Seeding...
+                    </>
+                ) : (
+                    <>
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        Seed Database with Sample Data
+                    </>
+                )}
+            </Button>
         </div>
     )
   }
@@ -160,7 +204,12 @@ export function LiveDashboard() {
                   <ChartTooltip content={<ChartTooltipContent nameKey="count" hideLabel />} />
                   <Pie data={riskLevelData} dataKey="count" nameKey="name" cx="50%" cy="50%" outerRadius={60}>
                     {riskLevelData.map((entry) => (
-                        <Cell key={`cell-${entry.name}`} fill={entry.fill} />
+                        <Cell key={`cell-${entry.name}`} fill={cn(
+                            entry.name === "Critical" && "hsl(var(--destructive))",
+                            entry.name === "High" && "hsl(var(--chart-1))",
+                            entry.name === "Medium" && "hsl(var(--chart-4))",
+                            entry.name === "Low" && "hsl(var(--chart-2))"
+                        )} />
                     ))}
                   </Pie>
                 </PieChart>
@@ -190,6 +239,7 @@ export function LiveDashboard() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base"><KeyRound className="h-5 w-5" /> Top Keywords</CardTitle>
+
           </CardHeader>
           <CardContent>
             <ChartContainer config={keywordChartConfig} className="h-48 w-full">

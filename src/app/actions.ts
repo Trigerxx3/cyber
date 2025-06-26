@@ -208,3 +208,103 @@ export async function getDashboardData() {
         };
     }
 }
+
+export async function seedDatabase() {
+    const firebaseAdmin = getFirebaseAdmin();
+    if (!firebaseAdmin) {
+        return { success: false, message: 'Firebase is not configured. Please set Firebase environment variables.' };
+    }
+
+    const db = firebaseAdmin.firestore();
+    const FieldValue = firebaseAdmin.firestore.FieldValue;
+    const batch = db.batch();
+
+    try {
+        // Sample Flagged Posts
+        const posts = [
+            {
+                platform: 'Telegram',
+                channel: '@thegoodstuff',
+                text: '🔥 New batch just dropped! Top quality MDMA pills (ecstasy) and pure crystal meth available now. Discreet shipping worldwide. DM for prices and menu. 💊🚀 #mdma #crystal #deals',
+                detected_keywords: ['MDMA', 'pills', 'crystal meth'],
+                matched_emojis: ['🔥', '💊', '🚀'],
+                riskScore: 95,
+                riskLevel: 'High',
+            },
+            {
+                platform: 'Instagram',
+                channel: 'partysupplies_uk',
+                text: 'Weekend forecast: 100% chance of rolling. Hmu if you need party favours for the festival. 🍬😉 Special powders ready. #weekendvibes #partytime',
+                detected_keywords: ['rolling', 'party favours', 'powders'],
+                matched_emojis: ['🍬', '😉'],
+                riskScore: 75,
+                riskLevel: 'High',
+            },
+            {
+                platform: 'WhatsApp',
+                channel: 'Secret Rave Group',
+                text: 'Got some fire molly for this weekend. Hit me up before it\'s all gone!',
+                detected_keywords: ['molly'],
+                matched_emojis: [],
+                riskScore: 80,
+                riskLevel: 'High',
+            },
+             {
+                platform: 'Telegram',
+                channel: '@chemcentral',
+                text: 'Testing out some new chemicals. Looking for psychonauts to give feedback. Message for details. #researchchem',
+                detected_keywords: ['chemicals', 'psychonauts'],
+                matched_emojis: [],
+                riskScore: 65,
+                riskLevel: 'Medium',
+            }
+        ];
+
+        posts.forEach(post => {
+            const docRef = db.collection('flagged_posts').doc();
+            batch.set(docRef, { ...post, status: 'flagged', timestamp: FieldValue.serverTimestamp() });
+        });
+
+        // Sample Suspected Users
+        const users = [
+            {
+                username: 'coke_dealer_nyc',
+                platform: 'Telegram',
+                linked_profiles: ['Instagram:nycsnowman', 'WhatsApp:coke_dealer_nyc'],
+                email: 'tony@montana.com',
+                risk_level: 'Critical',
+            },
+            {
+                username: 'rave_dave23',
+                platform: 'Instagram',
+                linked_profiles: [],
+                email: null,
+                risk_level: 'Medium',
+            }
+        ];
+
+        users.forEach(user => {
+            const docRef = db.collection('suspected_users').doc(user.username);
+            let emailHash = null;
+            if (user.email) {
+                emailHash = createHash('sha256').update(user.email).digest('hex');
+            }
+            batch.set(docRef, {
+                username: user.username,
+                platform: user.platform,
+                linked_profiles: user.linked_profiles,
+                email_hash: emailHash,
+                risk_level: user.risk_level,
+                last_seen: FieldValue.serverTimestamp(),
+            }, { merge: true });
+        });
+
+        await batch.commit();
+        return { success: true, message: 'Database seeded successfully with sample data.' };
+
+    } catch (error) {
+        console.error('Error seeding database:', error);
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+        return { success: false, message: `Failed to seed database: ${errorMessage}` };
+    }
+}
