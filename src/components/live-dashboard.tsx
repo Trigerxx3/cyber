@@ -7,12 +7,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { BarChart, Download, FileWarning, KeyRound, Loader2, PieChartIcon, Sparkles, Users } from 'lucide-react';
+import { Download, FileWarning, KeyRound, Loader2, PieChartIcon, Sparkles, Users } from 'lucide-react';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from '@/components/ui/chart';
 import { Bar, Pie, PieChart, ResponsiveContainer, Cell, XAxis, YAxis, Tooltip as RechartsTooltip, CartesianGrid } from 'recharts';
 import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { getSampleDashboardData } from '@/lib/sample-data';
 
 // Define types for the data we expect from the action
 type FlaggedPost = {
@@ -78,9 +79,11 @@ export function LiveDashboard() {
             const isConfigured = await isFirebaseConfigured();
             setFirebaseConfigured(isConfigured);
             
-            const result = await getDashboardData();
-            if (result) {
-                setData(result as any);
+            if (isConfigured) {
+              const result = await getDashboardData();
+              if (result) {
+                  setData(result as any);
+              }
             }
         } catch (error) {
             console.error("Failed to fetch dashboard data:", error);
@@ -99,22 +102,31 @@ export function LiveDashboard() {
   const handleSeedDatabase = async () => {
     setIsSeeding(true);
     try {
-        const result = await seedDatabase();
-        if (result.success) {
+        if (firebaseConfigured) {
+          const result = await seedDatabase();
+          if (result.success) {
+              toast({
+                  title: 'Success',
+                  description: result.message,
+              });
+              // Re-fetch data after seeding
+              const newData = await getDashboardData();
+              if (newData) {
+                  setData(newData as any);
+              }
+          } else {
+              toast({
+                  variant: 'destructive',
+                  title: 'Seeding Failed',
+                  description: result.message,
+              });
+          }
+        } else {
+            // "Demo mode" seeding
+            setData(getSampleDashboardData() as any);
             toast({
                 title: 'Success',
-                description: result.message,
-            });
-            // Re-fetch data after seeding
-            const newData = await getDashboardData();
-            if (newData) {
-                setData(newData as any);
-            }
-        } else {
-            toast({
-                variant: 'destructive',
-                title: 'Seeding Failed',
-                description: result.message,
+                description: 'Dashboard populated with sample data.',
             });
         }
     } catch (error) {
@@ -164,7 +176,7 @@ export function LiveDashboard() {
 
   const noData = !data || (!data.flaggedPosts.length && !data.suspectedUsers.length);
 
-  if (firebaseConfigured === false || (firebaseConfigured === true && noData)) {
+  if (noData) {
     return (
         <div className="flex flex-col items-center justify-center text-center p-12 border-2 border-dashed rounded-lg h-full min-h-[60vh]">
             <PieChartIcon className="h-12 w-12 text-muted-foreground mb-4" />
@@ -174,24 +186,22 @@ export function LiveDashboard() {
             <p className="text-muted-foreground mt-2 max-w-md">
                 {firebaseConfigured
                     ? "Submit some analyses to see data, or populate the dashboard with sample data to get started."
-                    : "Please set your Firebase environment variables to connect to the database and view the dashboard."
+                    : "To use a live database, please set your Firebase environment variables. Otherwise, you can use sample data to preview the dashboard."
                 }
             </p>
-            {firebaseConfigured && (
-                <Button className="mt-6" onClick={handleSeedDatabase} disabled={isSeeding}>
-                    {isSeeding ? (
-                        <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Seeding...
-                        </>
-                    ) : (
-                        <>
-                            <Sparkles className="mr-2 h-4 w-4" />
-                            Seed Database with Sample Data
-                        </>
-                    )}
-                </Button>
-            )}
+            <Button className="mt-6" onClick={handleSeedDatabase} disabled={isSeeding}>
+                {isSeeding ? (
+                    <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Populating...
+                    </>
+                ) : (
+                    <>
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        Populate with Sample Data
+                    </>
+                )}
+            </Button>
         </div>
     )
   }
@@ -248,7 +258,11 @@ export function LiveDashboard() {
                             <ChartTooltip content={<ChartTooltipContent nameKey="count" hideLabel />} />
                             <Pie data={platformData} dataKey="count" nameKey="name" cx="50%" cy="50%" outerRadius={60}>
                                 {platformData.map((entry) => (
-                                    <Cell key={`cell-${entry.name}`} fill={entry.fill} />
+                                    <Cell key={`cell-${entry.name}`} fill={cn(
+                                        entry.name === "Telegram" && "hsl(var(--chart-1))",
+                                        entry.name === "WhatsApp" && "hsl(var(--chart-2))",
+                                        entry.name === "Instagram" && "hsl(var(--chart-3))"
+                                    )} />
                                 ))}
                             </Pie>
                         </PieChart>
