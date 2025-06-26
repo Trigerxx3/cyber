@@ -4,6 +4,7 @@ import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import type { AnalyzeSocialMediaContentOutput } from '@/ai/flows/analyze-social-media-content';
 import type { AssessDrugTraffickingRiskOutput } from '@/ai/flows/assess-drug-trafficking-risk';
 import type { IdentifySuspectedUserOutput } from '@/ai/flows/identify-suspected-user';
+import { createHash } from 'crypto';
 
 export type FirestoreAnalysisData = {
     platform: string;
@@ -80,14 +81,24 @@ export async function saveSuspectedUserToFirestore(data: FirestoreSuspectedUserD
     try {
         const docRef = db.collection('suspected_users').doc(data.username);
         
+        // Create a copy to avoid mutating the original data
+        const analysisForDb = { ...data.analysisResult };
+        let emailHash = null;
+
+        if (analysisForDb.email) {
+            emailHash = createHash('sha256').update(analysisForDb.email).digest('hex');
+            // Replace the email in the analysis blob with its hash for secure storage
+            analysisForDb.email = emailHash;
+        }
+
         const dataToSave = {
             username: data.username,
             platform: data.platform,
-            linked_profiles: data.analysisResult.linkedProfiles,
-            email: data.analysisResult.email || null,
-            risk_level: data.analysisResult.riskLevel,
+            linked_profiles: analysisForDb.linkedProfiles,
+            email_hash: emailHash, // Store only the hash at the top level
+            risk_level: analysisForDb.riskLevel,
             last_seen: firebaseAdmin.firestore.FieldValue.serverTimestamp(),
-            full_analysis: data.analysisResult
+            full_analysis: analysisForDb, // This now contains the hashed email
         };
 
         await docRef.set(dataToSave, { merge: true });

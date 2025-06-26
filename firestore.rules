@@ -1,0 +1,19 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Only allow authenticated users to read.
+    // Writes are only allowed from the backend service using the Admin SDK.
+    match /flagged_posts/{postId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // Only allow authenticated users to read.
+    // Writes are only allowed from the backend service using the Admin SDK.
+    match /suspected_users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+  }
+}
