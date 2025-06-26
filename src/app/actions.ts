@@ -100,3 +100,100 @@ export async function saveSuspectedUserToFirestore(data: FirestoreSuspectedUserD
         return { success: false, message: `Failed to save user data: ${errorMessage}` };
     }
 }
+
+
+export async function getDashboardData() {
+    const firebaseAdmin = getFirebaseAdmin();
+    if (!firebaseAdmin) {
+        console.warn('Firebase is not configured, returning empty dashboard data.');
+        return {
+            flaggedPosts: [],
+            suspectedUsers: [],
+            stats: {
+                riskLevelCounts: {},
+                platformCounts: {},
+                keywordCounts: {},
+            }
+        };
+    }
+
+    const db = firebaseAdmin.firestore();
+
+    try {
+        // Get flagged posts
+        const postsSnapshot = await db.collection('flagged_posts').orderBy('timestamp', 'desc').limit(10).get();
+        const flaggedPosts = postsSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                platform: data.platform,
+                channel: data.channel,
+                text: data.text,
+                riskLevel: data.riskLevel,
+                riskScore: data.riskScore,
+                detected_keywords: data.detected_keywords,
+                timestamp: data.timestamp?.toDate().toISOString() || new Date().toISOString(),
+            };
+        });
+
+        // Get suspected users
+        const usersSnapshot = await db.collection('suspected_users').orderBy('last_seen', 'desc').limit(10).get();
+        const suspectedUsers = usersSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                username: data.username,
+                platform: data.platform,
+                risk_level: data.risk_level,
+                linked_profiles: data.linked_profiles || [],
+                last_seen: data.last_seen?.toDate().toISOString() || new Date().toISOString(),
+            };
+        });
+        
+        const allPostsSnapshot = await db.collection('flagged_posts').get();
+        const riskLevelCounts: Record<string, number> = {};
+        const platformCounts: Record<string, number> = {};
+        const keywordCounts: Record<string, number> = {};
+
+        allPostsSnapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.riskLevel) {
+                riskLevelCounts[data.riskLevel] = (riskLevelCounts[data.riskLevel] || 0) + 1;
+            }
+            if (data.platform) {
+                platformCounts[data.platform] = (platformCounts[data.platform] || 0) + 1;
+            }
+            if (data.detected_keywords && Array.isArray(data.detected_keywords)) {
+                data.detected_keywords.forEach((keyword: string) => {
+                    keywordCounts[keyword] = (keywordCounts[keyword] || 0) + 1;
+                });
+            }
+        });
+        
+        const topKeywords = Object.fromEntries(
+            Object.entries(keywordCounts).sort(([, a], [, b]) => b - a).slice(0, 10)
+        );
+
+        return { 
+            flaggedPosts, 
+            suspectedUsers, 
+            stats: {
+                riskLevelCounts,
+                platformCounts,
+                keywordCounts: topKeywords
+            } 
+        };
+
+    } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        return {
+            flaggedPosts: [],
+            suspectedUsers: [],
+            stats: {
+                riskLevelCounts: {},
+                platformCounts: {},
+                keywordCounts: {},
+            }
+        };
+    }
+}

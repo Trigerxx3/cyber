@@ -25,6 +25,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "./ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { LiveDashboard } from "./live-dashboard";
 
 const contentFormSchema = z.object({
   platform: z.enum(["Telegram", "WhatsApp", "Instagram"], {
@@ -366,11 +367,12 @@ export function Dashboard() {
 
   return (
     <main className="flex-1 p-4 sm:p-6 md:p-8">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-screen-2xl mx-auto">
         <Tabs defaultValue="content-analysis">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
             <TabsTrigger value="content-analysis">Content Analysis</TabsTrigger>
             <TabsTrigger value="user-investigation">User Investigation</TabsTrigger>
+            <TabsTrigger value="live-dashboard">Live Dashboard</TabsTrigger>
           </TabsList>
           
           <TabsContent value="content-analysis">
@@ -536,6 +538,11 @@ export function Dashboard() {
               </div>
             </div>
           </TabsContent>
+
+          <TabsContent value="live-dashboard">
+            <LiveDashboard />
+          </TabsContent>
+
         </Tabs>
       </div>
     </main>
