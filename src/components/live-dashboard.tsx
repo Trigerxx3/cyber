@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { getDashboardData, seedDatabase } from '@/app/actions';
+import { getDashboardData, seedDatabase, isFirebaseConfigured } from '@/app/actions';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -64,34 +64,37 @@ export function LiveDashboard() {
   const { toast } = useToast();
   const [loading, setLoading] = React.useState(true);
   const [isSeeding, setIsSeeding] = React.useState(false);
+  const [firebaseConfigured, setFirebaseConfigured] = React.useState<boolean | null>(null);
   const [data, setData] = React.useState<{
     flaggedPosts: FlaggedPost[];
     suspectedUsers: SuspectedUser[];
     stats: Stats;
   } | null>(null);
 
-  const fetchData = React.useCallback(async () => {
-    try {
-      setLoading(true);
-      const result = await getDashboardData();
-      if (result) {
-          setData(result as any);
-      }
-    } catch (error) {
-      console.error("Failed to fetch dashboard data:", error);
-      toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Could not fetch dashboard data.",
-      })
-    } finally {
-      setLoading(false);
-    }
-  }, [toast]);
-
   React.useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    const init = async () => {
+        setLoading(true);
+        try {
+            const isConfigured = await isFirebaseConfigured();
+            setFirebaseConfigured(isConfigured);
+            
+            const result = await getDashboardData();
+            if (result) {
+                setData(result as any);
+            }
+        } catch (error) {
+            console.error("Failed to fetch dashboard data:", error);
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Could not fetch dashboard data.",
+            })
+        } finally {
+            setLoading(false);
+        }
+    };
+    init();
+  }, [toast]);
 
   const handleSeedDatabase = async () => {
     setIsSeeding(true);
@@ -102,7 +105,11 @@ export function LiveDashboard() {
                 title: 'Success',
                 description: result.message,
             });
-            await fetchData();
+            // Re-fetch data after seeding
+            const newData = await getDashboardData();
+            if (newData) {
+                setData(newData as any);
+            }
         } else {
             toast({
                 variant: 'destructive',
@@ -155,29 +162,42 @@ export function LiveDashboard() {
     );
   }
 
-  if (!data || (!data.flaggedPosts.length && !data.suspectedUsers.length)) {
+  const noData = !data || (!data.flaggedPosts.length && !data.suspectedUsers.length);
+
+  if (firebaseConfigured === false || (firebaseConfigured === true && noData)) {
     return (
         <div className="flex flex-col items-center justify-center text-center p-12 border-2 border-dashed rounded-lg h-full min-h-[60vh]">
             <PieChartIcon className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-xl font-semibold">Dashboard is Empty</h3>
-            <p className="text-muted-foreground mt-2 max-w-md">Submit some analyses to see data, or populate the dashboard with sample data to get started.</p>
-            <Button className="mt-6" onClick={handleSeedDatabase} disabled={isSeeding}>
-                {isSeeding ? (
-                    <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Seeding...
-                    </>
-                ) : (
-                    <>
-                        <Sparkles className="mr-2 h-4 w-4" />
-                        Seed Database with Sample Data
-                    </>
-                )}
-            </Button>
+            <h3 className="text-xl font-semibold">
+                {firebaseConfigured ? "Dashboard is Empty" : "Firebase Not Configured"}
+            </h3>
+            <p className="text-muted-foreground mt-2 max-w-md">
+                {firebaseConfigured
+                    ? "Submit some analyses to see data, or populate the dashboard with sample data to get started."
+                    : "Please set your Firebase environment variables to connect to the database and view the dashboard."
+                }
+            </p>
+            {firebaseConfigured && (
+                <Button className="mt-6" onClick={handleSeedDatabase} disabled={isSeeding}>
+                    {isSeeding ? (
+                        <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Seeding...
+                        </>
+                    ) : (
+                        <>
+                            <Sparkles className="mr-2 h-4 w-4" />
+                            Seed Database with Sample Data
+                        </>
+                    )}
+                </Button>
+            )}
         </div>
     )
   }
   
+  if (!data) return null; // Should not happen if logic above is correct, but good for type safety
+
   const riskLevelData = Object.entries(data.stats.riskLevelCounts).map(([name, count]) => ({ name, count, fill: `var(--color-${name})` }));
   const platformData = Object.entries(data.stats.platformCounts).map(([name, count]) => ({ name, count, fill: `var(--color-${name})` }));
   const keywordData = Object.entries(data.stats.keywordCounts).map(([name, count]) => ({ name, count }));

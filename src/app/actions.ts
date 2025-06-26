@@ -308,3 +308,7 @@ export async function seedDatabase() {
         return { success: false, message: `Failed to seed database: ${errorMessage}` };
     }
 }
+
+export async function isFirebaseConfigured(): Promise<boolean> {
+    return !!getFirebaseAdmin();
+}
