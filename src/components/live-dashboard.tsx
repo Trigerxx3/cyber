@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Download, FileWarning, KeyRound, Loader2, PieChartIcon, Sparkles, Users } from 'lucide-react';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from '@/components/ui/chart';
-import { Bar, Pie, PieChart, ResponsiveContainer, Cell, XAxis, YAxis, Tooltip as RechartsTooltip, CartesianGrid } from 'recharts';
+import { Bar, BarChart, Pie, PieChart, ResponsiveContainer, Cell, XAxis, YAxis, Tooltip as RechartsTooltip, CartesianGrid } from 'recharts';
 import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -84,6 +84,8 @@ export function LiveDashboard() {
               if (result) {
                   setData(result as any);
               }
+            } else {
+              setData(getSampleDashboardData() as any);
             }
         } catch (error) {
             console.error("Failed to fetch dashboard data:", error);
@@ -175,6 +177,31 @@ export function LiveDashboard() {
   }
 
   const noData = !data || (!data.flaggedPosts.length && !data.suspectedUsers.length);
+
+  if (firebaseConfigured === false && noData) {
+    return (
+      <div className="flex flex-col items-center justify-center text-center p-12 border-2 border-dashed rounded-lg h-full min-h-[60vh]">
+        <PieChartIcon className="h-12 w-12 text-muted-foreground mb-4" />
+        <h3 className="text-xl font-semibold">Firebase Not Configured</h3>
+        <p className="text-muted-foreground mt-2 max-w-md">
+            Please set your Firebase environment variables to connect to the database and view the dashboard. You can use sample data to preview the dashboard in the meantime.
+        </p>
+        <Button className="mt-6" onClick={handleSeedDatabase} disabled={isSeeding}>
+            {isSeeding ? (
+                <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Populating...
+                </>
+            ) : (
+                <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Populate with Sample Data
+                </>
+            )}
+        </Button>
+      </div>
+    );
+  }
 
   if (noData) {
     return (
