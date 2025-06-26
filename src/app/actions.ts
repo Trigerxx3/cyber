@@ -36,9 +36,11 @@ export async function saveAnalysisToFirestore(data: FirestoreAnalysisData) {
             platform: data.platform,
             channel: data.channel || null,
             text: data.content,
-            detected_keywords: data.riskResult.indicators,
+            detected_keywords: data.analysisResult.matchedKeywords,
+            matched_emojis: data.analysisResult.matchedEmojis,
             riskScore: data.riskResult.riskScore,
             riskLevel: data.riskResult.riskLevel,
+            status: 'flagged',
             timestamp: FieldValue.serverTimestamp(),
             full_analysis: {
                 analysis: data.analysisResult,
