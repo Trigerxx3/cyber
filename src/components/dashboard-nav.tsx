@@ -1,5 +1,6 @@
 "use client";
 
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
 import { LayoutDashboard, Search, Users, FileText, Bell } from 'lucide-react';
@@ -17,14 +18,19 @@ export function DashboardNav() {
 
     return (
         <SidebarMenu>
-            {navItems.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton href={item.href} isActive={pathname === item.href} tooltip={item.label}>
-                        {item.icon}
-                        {item.label}
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-            ))}
+            {navItems.map((item) => {
+                const isActive = item.href === '/dashboard' ? pathname === item.href : pathname.startsWith(item.href);
+                return (
+                    <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
+                            <Link href={item.href}>
+                                {item.icon}
+                                {item.label}
+                            </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                );
+            })}
         </SidebarMenu>
     );
 }
