@@ -311,5 +311,5 @@ export function ContentAnalysis() {
           {renderContentResults()}
       </div>
     </div>
-  );
+  )
 }

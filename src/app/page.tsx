@@ -2,22 +2,22 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ShieldCheck, BrainCircuit, SearchCode, ArrowRight } from 'lucide-react';
+import { ShieldHalf, BrainCircuit, SearchCode, ArrowRight } from 'lucide-react';
 
 const Header = () => (
   <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
     <div className="container flex h-14 max-w-screen-2xl items-center">
       <div className="mr-4 flex">
         <Link href="/" className="mr-6 flex items-center space-x-2">
-          <ShieldCheck className="h-6 w-6 text-primary" />
+          <ShieldHalf className="h-6 w-6 text-primary" />
           <span className="font-bold">NIP</span>
         </Link>
       </div>
       <nav className="flex flex-1 items-center justify-end space-x-6 text-sm font-medium">
         <Link href="/dashboard" className="text-foreground/60 transition-colors hover:text-foreground/80">Dashboard</Link>
-        <Link href="#" className="text-foreground/60 transition-colors hover:text-foreground/80">Reports</Link>
-        <Link href="#" className="text-foreground/60 transition-colors hover:text-foreground/80">Alerts</Link>
-        <Link href="#" className="text-foreground/60 transition-colors hover:text-foreground/80">Settings</Link>
+        <Link href="/dashboard/reports" className="text-foreground/60 transition-colors hover:text-foreground/80">Reports</Link>
+        <Link href="/dashboard/alerts" className="text-foreground/60 transition-colors hover:text-foreground/80">Alerts</Link>
+        <Link href="/dashboard/settings" className="text-foreground/60 transition-colors hover:text-foreground/80">Settings</Link>
       </nav>
     </div>
   </header>
@@ -94,7 +94,7 @@ export default function LandingPage() {
             </div>
             <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
               <FeatureCard 
-                icon={<ShieldCheck className="h-8 w-8 text-primary" />} 
+                icon={<ShieldHalf className="h-8 w-8 text-primary" />} 
                 title="Real-Time Monitoring" 
                 description="Actively monitor public channels and groups across major platforms for suspicious activities."
               />
