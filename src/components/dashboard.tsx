@@ -42,7 +42,7 @@ const userFormSchema = z.object({
   username: z.string().min(3, { message: "Username must be at least 3 characters." }),
 });
 
-export function Dashboard() {
+export function PlatformDashboard() {
   const { toast } = useToast();
   
   const [isContentLoading, setIsContentLoading] = React.useState(false);

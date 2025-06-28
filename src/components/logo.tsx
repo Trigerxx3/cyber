@@ -9,10 +9,10 @@ export function Logo() {
       </div>
       <div className="overflow-hidden">
         <h1 className="text-base font-semibold text-foreground whitespace-nowrap group-data-[collapsible=icon]:-translate-x-12 transition-transform duration-300">
-          Clandestine Analysis
+          Narcotics Intelligence
         </h1>
         <p className="text-xs text-muted-foreground whitespace-nowrap group-data-[collapsible=icon]:-translate-x-12 transition-transform duration-300">
-          Tool
+          Platform
         </p>
       </div>
     </div>
